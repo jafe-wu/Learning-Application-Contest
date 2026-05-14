@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <windows.h>
 
 static const double SCALE    = 3.0;
 static const int    X_OFFSET = 50;
@@ -12,8 +13,13 @@ static const int    Y_OFFSET = 80;
 static const int    PALLET_W = 440;  // mm
 static const int    PALLET_H = 140;  // mm
 
+// UTF-8 std::string → 宽字符 std::wstring (用于 EasyX UNICODE 输出)
 static std::wstring s2w(const std::string& s) {
-    return std::wstring(s.begin(), s.end());
+    if (s.empty()) return {};
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    std::wstring ws(len, 0);
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &ws[0], len);
+    return ws;
 }
 
 static std::wstring fmtPct(double v) {
@@ -99,6 +105,43 @@ static void DrawPallet(const PalletSnapshot& snap,
         outtextxy(screen_x + (rect_w - text_w) / 2,
                   screen_y + (rect_h - text_h) / 2,
                   seq_str.c_str());
+
+        // 在每个色块底部标注烟的名称
+        settextcolor(RGB(40, 40, 40));
+        settextstyle(11, 0, _T("SimSun"));
+        if (task.grabCount == 2 && task.items.size() == 2) {
+            // 双取：左右两半分别标注各自名称
+            int sep_px = static_cast<int>(task.items[0].width * SCALE);
+            // 左半
+            std::wstring nameL = s2w(task.items[0].name);
+            int twL = textwidth(nameL.c_str());
+            int availableL = sep_px - 4;
+            if (twL > availableL && availableL > 0) {
+                // 超宽则逐字截断
+                while (nameL.size() > 1 && textwidth(nameL.substr(0, nameL.size()-1).c_str()) > availableL)
+                    nameL.pop_back();
+            }
+            outtextxy(screen_x + 2, screen_y + rect_h - 14, nameL.c_str());
+            // 右半
+            std::wstring nameR = s2w(task.items[1].name);
+            int twR = textwidth(nameR.c_str());
+            int availableR = rect_w - sep_px - 4;
+            if (twR > availableR && availableR > 0) {
+                while (nameR.size() > 1 && textwidth(nameR.substr(0, nameR.size()-1).c_str()) > availableR)
+                    nameR.pop_back();
+            }
+            outtextxy(screen_x + sep_px + 2, screen_y + rect_h - 14, nameR.c_str());
+        } else {
+            // 单取：整块标注名称
+            std::wstring nameStr = s2w(task.items[0].name);
+            int tw = textwidth(nameStr.c_str());
+            int available = rect_w - 4;
+            if (tw > available && available > 0) {
+                while (nameStr.size() > 1 && textwidth(nameStr.substr(0, nameStr.size()-1).c_str()) > available)
+                    nameStr.pop_back();
+            }
+            outtextxy(screen_x + 2, screen_y + rect_h - 14, nameStr.c_str());
+        }
     }
 
     // ── 底部图例 ──────────────────────────────────────

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(file *.csv *.xls *.tsv)",
+      "Bash(cmd //c build.bat)",
+      "Bash(cmd.exe //c \"build.bat\")",
+      "Bash(cmd.exe /c build.bat)",
+      "Bash(cmd.exe /c \"call \\\\\"D:\\\\Visual Studio\\\\VC\\\\Auxiliary\\\\Build\\\\vcvars64.bat\\\\\" && cl /nologo /EHsc /std:c++17 /source-charset:utf-8 /execution-charset:gbk /MD /DUNICODE /D_UNICODE /I\\\\\"D:\\\\Visual Studio\\\\VC\\\\Auxiliary\\\\VS\\\\include\\\\\" main.cpp PalletAlgorithm.cpp PalletizerController.cpp DimDB.cpp OrderLoader.cpp Visualizer.cpp /Fe:main.exe /link /LIBPATH:\\\\\"D:\\\\Visual Studio\\\\VC\\\\Auxiliary\\\\VS\\\\lib\\\\x64\\\\\" user32.lib gdi32.lib shell32.lib EasyXw.lib\")",
+      "Read(//d/Visual Studio/VC/Auxiliary/Build/**)",
+      "Read(//d/Visual Studio/VC/Auxiliary/VS/include/**)",
+      "Bash(cmd.exe //c build.bat)",
+      "Read(//tmp/**)",
+      "Bash(cat)",
+      "Bash(cmd.exe //c \"C:\\\\tmp\\\\build_project.bat\")",
+      "Bash(cmd.exe //c \"build_tmp\\\\\\\\build.bat\")",
+      "Read(//d/Visual Studio/VC/Auxiliary/VS/bin/Hostx64/x64/**)",
+      "Read(//d/Visual Studio/VC/Auxiliary/VS/**)",
+      "Read(//d/Visual Studio/**)",
+      "Bash(export MSVC_BIN=\"D:/Visual Studio/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64\")",
+      "Bash(export MSVC_INCLUDE=\"D:/Visual Studio/VC/Tools/MSVC/14.51.36231/include\")",
+      "Bash(export MSVC_LIB=\"D:/Visual Studio/VC/Tools/MSVC/14.51.36231/lib/x64\")",
+      "Bash(export UCRT=\"C:/Program Files \\(x86\\)/Windows Kits/10/Lib/10.0.26100.0/ucrt/x64\")",
+      "Bash(export UM=\"C:/Program Files \\(x86\\)/Windows Kits/10/Lib/10.0.26100.0/um/x64\")",
+      "Read(//c/Program Files \\(x86\\)/Windows Kits/10/**)",
+      "Read(//c/Program Files/Windows Kits/10/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(find \"C:/Program Files \\(x86\\)/Windows Kits\" -maxdepth 3 -name \"ucrt.lib\" 2>/dev/null | head -3)",
+      "Read(//c/Program Files \\(x86\\)/Windows Kits/**)",
+      "Bash(cmd.exe //c \"c:\\\\Users\\\\18149\\\\Desktop\\\\Learning_Application_Contest\\\\Learning-Application-Contest\\\\code_competition_verson\\\\do_build.bat\")",
+      "Bash(cmd.exe //c \"c:\\\\Users\\\\18149\\\\Desktop\\\\Learning_Application_Contest\\\\Learning-Application-Contest\\\\code_competition_verson\\\\do_run.bat\")"
+    ]
+  }
+}
