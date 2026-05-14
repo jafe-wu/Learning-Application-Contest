@@ -15,13 +15,14 @@ public:
     std::string id;
     std::string name;
     std::string order_id;
-    double length; // 长 (mm) — 沿托盘长度方向，算法内部降维不使用，仅保留
-    double width;  // 宽 (mm)
-    double height; // 高 (mm)
+    int    seq;      // 来料顺序号（原始数据中的行号）
+    double length;   // 长 (mm)
+    double width;    // 宽 (mm)
+    double height;   // 高 (mm)
 
     CigaretteItem(std::string id, std::string n, std::string oid,
-                  int raw_l, int raw_w, int raw_h)
-        : id(id), name(n), order_id(oid) {
+                  int seq, int raw_l, int raw_w, int raw_h)
+        : id(id), name(n), order_id(oid), seq(seq) {
         // 原始单位 0.1mm，这里统一换算成 mm
         this->length = raw_l / 10.0;
         this->width  = raw_w / 10.0;

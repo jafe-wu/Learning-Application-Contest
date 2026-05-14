@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
+double PalletSpace::DEAD_ZONE_WIDTH = 77.3;
+
 PalletSpace::PalletSpace() {
     // 初始化地面，高度 0，预留容量避免扩容开销
     skyline.reserve(32); 
@@ -17,12 +19,13 @@ bool PalletSpace::IsEmpty() const {
 bool PalletSpace::TryInsert(GrabTask& task) {
     double best_x = -1.0;
     double best_y = 1e9;
+    double best_support = -1.0;
 
     std::vector<double> candidate_xs;
-    candidate_xs.reserve(skyline.size() * 2 + 1);
+    candidate_xs.reserve(skyline.size() * 3 + 1);
     candidate_xs.push_back(5.0);
 
-    // 剪枝优化1：直接在生成候选点时过滤掉明显越界的坐标
+    // 生成边界候选点
     for (const auto& seg : skyline) {
         if (seg.x1 >= 5.0 && seg.x1 + task.totalWidth <= MAX_WIDTH - 5.0) {
             candidate_xs.push_back(seg.x1);
@@ -32,36 +35,48 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         }
     }
 
+    // B3: 在大间隙中添加中点候选
+    for (size_t k = 0; k + 1 < skyline.size(); ++k) {
+        double gap_start = skyline[k].x2;
+        double gap_end   = skyline[k+1].x1;
+        double gap_width = gap_end - gap_start;
+        if (gap_width >= task.totalWidth + 10.0) {
+            double mid = gap_start + (gap_width - task.totalWidth) / 2.0;
+            if (mid >= 5.0 && mid + task.totalWidth <= MAX_WIDTH - 5.0) {
+                candidate_xs.push_back(mid);
+            }
+        }
+    }
+
     for (double candidate_x : candidate_xs) {
         double place_start = candidate_x;
         double place_end   = candidate_x + task.totalWidth;
         double candidate_y = 0.0;
-        
-        // 剪枝优化2：合并最大高度获取与高度越界检查
+
+        // 获取放置区域最大高度
         for (const auto& seg : skyline) {
             if (seg.x2 <= place_start || seg.x1 >= place_end) continue;
             if (seg.height > candidate_y) candidate_y = seg.height;
         }
 
-        // 破顶直接跳过
+        // 破顶检查
         if (candidate_y + task.maxHeight > MAX_HEIGHT) continue;
 
-        // 3. 虚拟包围盒防碰撞（左右各扩 5mm 确保抓取间隙）
+        // A1: 虚拟包围盒防碰撞：5mm 扩展区内抬升 candidate_y 以避开障碍
         double check_start_x = candidate_x - 5.0;
         double check_end_x   = candidate_x + task.totalWidth + 5.0;
-        bool collision = false;
-        
+
         for (const auto& seg : skyline) {
             if (seg.x2 <= check_start_x || seg.x1 >= check_end_x) continue;
-            // 只有当障碍物高度高于我们打算放置的高度时，才算作碰撞
             if (seg.height > candidate_y) {
-                collision = true;
-                break;
+                candidate_y = seg.height;
             }
         }
-        if (collision) continue;
 
-        // 4. 悬空稳态判定
+        // 抬升后重新检查越顶
+        if (candidate_y + task.maxHeight > MAX_HEIGHT) continue;
+
+        // 悬空稳态判定
         double support_length = 0.0;
         for (const auto& seg : skyline) {
             if (std::abs(seg.height - candidate_y) < 0.01) {
@@ -74,11 +89,22 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         }
         if (task.totalWidth - support_length > 20.0) continue;
 
-        // 5. 评价函数：优先 Y 最小 (底层优先)，平局挑 X 最小 (左侧优先)
-        if (candidate_y < best_y - 0.01 ||
-            (std::abs(candidate_y - best_y) < 0.01 && candidate_x < best_x)) {
+        // B2: 三级评价：Y 最小 → 支撑率最大 → X 最小
+        bool better = false;
+        if (candidate_y < best_y - 0.01) {
+            better = true;
+        } else if (std::abs(candidate_y - best_y) < 0.01) {
+            double sr = support_length / task.totalWidth;
+            if (sr > best_support + 0.01) {
+                better = true;
+            } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
+                better = true;
+            }
+        }
+        if (better) {
             best_y = candidate_y;
             best_x = candidate_x;
+            best_support = support_length / task.totalWidth;
         }
     }
 

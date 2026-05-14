@@ -17,6 +17,9 @@ public:
 
     size_t Size() const { return byId_.size(); }
 
+    // 返回所有物料的最小宽度 (mm)
+    double MinWidth() const;
+
 private:
     std::unordered_map<std::string, DimEntry> byId_;
     std::unordered_map<std::string, DimEntry> byName_;

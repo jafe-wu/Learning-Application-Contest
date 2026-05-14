@@ -28,7 +28,7 @@ add_executable(main
 
 # 仅 MSVC 下使用 EasyX (MinGW 的 graphics.h 是 EGE，不兼容)
 if(MSVC)
-    target_compile_options(main PRIVATE /utf-8 /EHsc /source-charset:utf-8 /execution-charset:gbk)
+    target_compile_options(main PRIVATE /EHsc /source-charset:utf-8 /execution-charset:gbk)
     target_compile_definitions(main PRIVATE UNICODE _UNICODE)
     target_include_directories(main PRIVATE "${EASYX_INCLUDE}")
     target_link_directories(main PRIVATE "${EASYX_LIB_DIR}")

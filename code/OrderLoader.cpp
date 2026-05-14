@@ -12,6 +12,7 @@ bool OrderLoader::LoadFromTSV(const std::string& path, const DimDB& dims,
     std::string line;
     std::getline(f, line); // skip header
 
+    int seqNum = 0;
     while (std::getline(f, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line.empty()) continue;
@@ -36,9 +37,11 @@ bool OrderLoader::LoadFromTSV(const std::string& path, const DimDB& dims,
             continue;
         }
 
+        seqNum++;
         for (int i = 0; i < qty; ++i)
             out.emplace_back(item_id, item_name,
                              "ORDER_" + order_id,
+                             seqNum,
                              dim.raw_l, dim.raw_w, dim.raw_h);
     }
     return true;

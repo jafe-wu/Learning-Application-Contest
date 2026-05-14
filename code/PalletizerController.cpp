@@ -11,9 +11,11 @@ void PalletizerController::SealPallet(PalletSnapshot& current,
                                       int& nextId) {
     if (current.tasks.empty()) return;
 
-    // 面积利用率 = Σ(宽 × 高) / (440 × 140)
+    // 面积利用率 = Σ(单件面积) / (440 × 140)
     double used = 0.0;
-    for (const auto& t : current.tasks) used += t.totalWidth * t.maxHeight;
+    for (const auto& t : current.tasks)
+        for (const auto& item : t.items)
+            used += item.width * item.height;
     current.utilizationPct =
         used / (PalletSpace::MAX_WIDTH * PalletSpace::MAX_HEIGHT) * 100.0;
 
@@ -123,33 +125,63 @@ void PalletizerController::ProcessQueue(const std::vector<CigaretteItem>& queue)
             // 已在上面初始化
         }
 
-        // 前瞻合成：下一条同订单且 |Δh| ≤ 1mm 可双取
+        // 前瞻合成：下一条同订单且 |Δh| ≤ 1mm 且宽度和不越界可双取
         GrabTask task;
         task.addItem(a);
         size_t consumed = 1;
+        bool doubleGrab = false;
         if (i + 1 < queue.size()) {
             const CigaretteItem& b = queue[i + 1];
             if (b.order_id == a.order_id &&
-                std::abs(a.height - b.height) <= 1.0) {
+                std::abs(a.height - b.height) <= 1.0 &&
+                a.width + b.width <= PalletSpace::MAX_WIDTH - 10.0) {
                 task.addItem(b);
                 consumed = 2;
+                doubleGrab = true;
             }
         }
 
-        // 尝试放置；失败则封垛重试
+        // 尝试放置；双取失败时回退单取；都失败则封垛重试
+        bool justSealed = false;
         if (!space.TryInsert(task)) {
-            if (space.IsEmpty()) {
+            // 双取失败 → 退回单取再试
+            if (doubleGrab) {
+                GrabTask singleTask;
+                singleTask.addItem(a);
+                if (space.TryInsert(singleTask)) {
+                    task = singleTask;
+                    consumed = 1;
+                    doubleGrab = false;
+                } else if (space.IsEmpty()) {
+                    i += 1;
+                    itemsConsumedInOrder += 1;
+                    continue;
+                } else {
+                    SealPallet(current, space, nextId);
+                    batchIndex++;
+                    justSealed = true;
+                    current.orderId = a.order_id;
+                    if (!space.TryInsert(task)) {
+                        i += 1;
+                        itemsConsumedInOrder += 1;
+                        continue;
+                    }
+                    consumed = doubleGrab ? 2 : 1;
+                }
+            } else if (space.IsEmpty()) {
                 i += consumed;
                 itemsConsumedInOrder += (int)consumed;
                 continue;
-            }
-            SealPallet(current, space, nextId);
-            batchIndex++;
-            current.orderId = a.order_id;
-            if (!space.TryInsert(task)) {
-                i += consumed;
-                itemsConsumedInOrder += (int)consumed;
-                continue;
+            } else {
+                SealPallet(current, space, nextId);
+                batchIndex++;
+                justSealed = true;
+                current.orderId = a.order_id;
+                if (!space.TryInsert(task)) {
+                    i += consumed;
+                    itemsConsumedInOrder += (int)consumed;
+                    continue;
+                }
             }
         }
 
@@ -158,12 +190,11 @@ void PalletizerController::ProcessQueue(const std::vector<CigaretteItem>& queue)
         itemsConsumedInOrder += (int)consumed;
         i += consumed;
 
-        // ── 均衡封垛：到达分界点时主动封垛 ────────────
-        if (bdIt != boundaries.end()) {
+        // ── 均衡封垛：到达分界点时主动封垛（仅在本次未触发过封垛时检查）──
+        if (!justSealed && bdIt != boundaries.end()) {
             const std::vector<int>& bd = bdIt->second;
             if (batchIndex < (int)bd.size() &&
                 itemsConsumedInOrder >= bd[batchIndex]) {
-                // 已到分界点，且托盘非空 → 主动封垛
                 if (!current.tasks.empty()) {
                     SealPallet(current, space, nextId);
                     batchIndex++;

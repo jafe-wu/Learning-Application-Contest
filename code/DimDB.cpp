@@ -2,6 +2,7 @@
 #include "DimDB.h"
 #include <fstream>
 #include <sstream>
+#include <limits>
 
 std::string DimDB::trim(const std::string& s) {
     size_t a = s.find_first_not_of(" \t\r\n\xEF\xBB\xBF");
@@ -50,4 +51,13 @@ bool DimDB::Lookup(const std::string& id, const std::string& name, DimEntry& out
     auto it2 = byName_.find(name);
     if (it2 != byName_.end()) { out = it2->second; return true; }
     return false;
+}
+
+double DimDB::MinWidth() const {
+    double minW = std::numeric_limits<double>::max();
+    for (const auto& kv : byId_) {
+        double w = kv.second.raw_w / 10.0;
+        if (w < minW) minW = w;
+    }
+    return minW;
 }

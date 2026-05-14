@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <locale>
+#include <fstream>
 #include <conio.h>
 #include "ItemDef.h"
 #include "DimDB.h"
@@ -20,6 +21,10 @@ int main() {
         return 1;
     }
     std::cout << "尺寸库加载完成，共 " << dims.Size() << " 条记录\n";
+
+    // 设置死区宽度为数据集中的最小烟型宽度
+    PalletSpace::SetDeadZoneWidth(dims.MinWidth());
+    std::cout << "最小烟型宽度: " << dims.MinWidth() << " mm\n";
 
     // ── 2. 加载订单队列 ────────────────────────────────
     std::vector<CigaretteItem> queue;
@@ -53,7 +58,31 @@ int main() {
                   << "  利用率=" << p.utilizationPct << "%\n";
     }
 
-    // ── 4. 可视化 ──────────────────────────────────────
+    // ── 4. 导出码垛数据 CSV ─────────────────────────────
+    {
+        std::ofstream csv("pallet_result.csv");
+        csv << "\xEF\xBB\xBF"; // UTF-8 BOM，让 Excel 正确识别中文
+        csv << "码垛号,码垛机械手抓取顺序号,订单顺序号,来料顺序号,卷烟名称,抓取数量\n";
+        for (const auto& p : controller.GetPallets()) {
+            int orderId = 0;
+            try { orderId = std::stoi(p.orderId.substr(6)); } catch (...) {}
+            for (size_t gi = 0; gi < p.tasks.size(); ++gi) {
+                const auto& task = p.tasks[gi];
+                for (const auto& item : task.items) {
+                    csv << p.palletId << ","
+                        << (gi + 1) << ","
+                        << orderId << ","
+                        << item.seq << ","
+                        << item.name << ","
+                        << 1 << "\n";
+                }
+            }
+        }
+        csv.close();
+        std::cout << "\n码垛数据已导出到 pallet_result.csv（可用 Excel 打开）\n";
+    }
+
+    // ── 5. 可视化 ──────────────────────────────────────
     RenderInteractive(controller);
     return 0;
 }
