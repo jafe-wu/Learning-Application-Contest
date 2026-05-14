@@ -1,0 +1,10 @@
+^E:\USER\DESKTOP\CODE_COMPETITION_VERSON\22\LEARNING-APPLICATION-CONTEST\BUILD\CMAKEFILES\B028AFBE0CADFC8353EDE1C3DD366AC0\GENERATE.STAMP.RULE
+setlocal
+"E:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SE:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/code_competition_verson -BE:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file E:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/build/cigarette_pallet.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

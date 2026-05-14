@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\PalletAlgorithm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\PalletizerController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\DimDB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\OrderLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\Visualizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="E:\User\Desktop\code_competition_verson\22\Learning-Application-Contest\code_competition_verson\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{99FC959D-BC41-3605-BB8A-1E751E660125}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

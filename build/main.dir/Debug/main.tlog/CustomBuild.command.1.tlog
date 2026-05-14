@@ -1,0 +1,10 @@
+^E:\USER\DESKTOP\CODE_COMPETITION_VERSON\22\LEARNING-APPLICATION-CONTEST\CODE_COMPETITION_VERSON\CMAKELISTS.TXT
+setlocal
+"E:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SE:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/code_competition_verson -BE:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/build --check-stamp-file E:/User/Desktop/code_competition_verson/22/Learning-Application-Contest/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
