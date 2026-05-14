@@ -27,7 +27,11 @@
       "Bash(find \"C:/Program Files \\(x86\\)/Windows Kits\" -maxdepth 3 -name \"ucrt.lib\" 2>/dev/null | head -3)",
       "Read(//c/Program Files \\(x86\\)/Windows Kits/**)",
       "Bash(cmd.exe //c \"c:\\\\Users\\\\18149\\\\Desktop\\\\Learning_Application_Contest\\\\Learning-Application-Contest\\\\code_competition_verson\\\\do_build.bat\")",
-      "Bash(cmd.exe //c \"c:\\\\Users\\\\18149\\\\Desktop\\\\Learning_Application_Contest\\\\Learning-Application-Contest\\\\code_competition_verson\\\\do_run.bat\")"
+      "Bash(cmd.exe //c \"c:\\\\Users\\\\18149\\\\Desktop\\\\Learning_Application_Contest\\\\Learning-Application-Contest\\\\code_competition_verson\\\\do_run.bat\")",
+      "Bash(awk -F'\\\\t' 'NR>1{orders[$1]++} END{for\\(o in orders\\) print o, orders[o]}' orders.tsv)",
+      "Bash(sort -t'_' -k2 -n)",
+      "Bash(python -c ' *)",
+      "Bash(py -c ' *)"
     ]
   }
 }
