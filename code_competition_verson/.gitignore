@@ -1,0 +1,35 @@
+# Build output
+build/
+
+# VSCode
+.vscode/
+
+# Visual Studio
+*.sln
+*.vcxproj*
+*.dir/
+out/
+CMakeSettings.json
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Compiled
+*.exe
+*.obj
+*.o
+*.lib
+*.pdb
+*.ilk
+*.exp
+*.dll
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Documents
+*.docx
