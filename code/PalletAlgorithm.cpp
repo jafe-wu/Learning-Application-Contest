@@ -76,7 +76,7 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         // 抬升后重新检查越顶
         if (candidate_y + task.maxHeight > MAX_HEIGHT) continue;
 
-        // 悬空稳态判定
+        // 悬空稳态判定（放宽至30mm以提高托盘填充率）
         double support_length = 0.0;
         for (const auto& seg : skyline) {
             if (std::abs(seg.height - candidate_y) < 0.01) {
@@ -87,7 +87,7 @@ bool PalletSpace::TryInsert(GrabTask& task) {
                 }
             }
         }
-        if (task.totalWidth - support_length > 20.0) continue;
+        if (task.totalWidth - support_length > 30.0) continue;
 
         // B2: 三级评价：Y 最小 → 支撑率最大 → X 最小
         bool better = false;

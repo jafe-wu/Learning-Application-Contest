@@ -30,6 +30,8 @@ public:
     long long RunTimeMicros() const { return runtimeMicros_; }
 
 private:
+    static constexpr int MIN_ITEMS_BEFORE_SEAL = 12; // 托盘至少需要填入的物品数
+
     std::vector<PalletSnapshot> pallets_;
     int       totalGrabs_    = 0;
     long long runtimeMicros_ = 0;

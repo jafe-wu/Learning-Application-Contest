@@ -141,8 +141,15 @@ void PalletizerController::ProcessQueue(const std::vector<CigaretteItem>& queue)
             }
         }
 
-        // 尝试放置；双取失败时回退单取；都失败则封垛重试
+        // 尝试放置；双取失败时回退单取；物品数不足时强制重试
         bool justSealed = false;
+        auto currentItemCount = [&current]() {
+            int cnt = 0;
+            for (const auto& t : current.tasks)
+                cnt += (int)t.items.size();
+            return cnt;
+        };
+
         if (!space.TryInsert(task)) {
             // 双取失败 → 退回单取再试
             if (doubleGrab) {
@@ -153,6 +160,11 @@ void PalletizerController::ProcessQueue(const std::vector<CigaretteItem>& queue)
                     consumed = 1;
                     doubleGrab = false;
                 } else if (space.IsEmpty()) {
+                    i += 1;
+                    itemsConsumedInOrder += 1;
+                    continue;
+                } else if (currentItemCount() < MIN_ITEMS_BEFORE_SEAL) {
+                    // 物品数不足，不封垛，跳过此物品继续尝试
                     i += 1;
                     itemsConsumedInOrder += 1;
                     continue;
@@ -169,6 +181,11 @@ void PalletizerController::ProcessQueue(const std::vector<CigaretteItem>& queue)
                     consumed = doubleGrab ? 2 : 1;
                 }
             } else if (space.IsEmpty()) {
+                i += consumed;
+                itemsConsumedInOrder += (int)consumed;
+                continue;
+            } else if (currentItemCount() < MIN_ITEMS_BEFORE_SEAL) {
+                // 物品数不足，不封垛，跳过此物品继续尝试
                 i += consumed;
                 itemsConsumedInOrder += (int)consumed;
                 continue;
