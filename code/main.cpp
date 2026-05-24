@@ -61,7 +61,6 @@ int main() {
     // ── 4. 导出码垛数据 CSV ─────────────────────────────
     {
         std::ofstream csv("pallet_result.csv");
-        csv << "\xEF\xBB\xBF"; // UTF-8 BOM，让 Excel 正确识别中文
         csv << "码垛号,码垛机械手抓取顺序号,订单顺序号,来料顺序号,卷烟名称,抓取数量\n";
         for (const auto& p : controller.GetPallets()) {
             int orderId = 0;

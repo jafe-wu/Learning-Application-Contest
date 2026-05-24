@@ -48,6 +48,32 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         }
     }
 
+    // ── 第一遍扫描：计算当前最低可用水平面 ──
+    double min_possible_y = 1e9;
+    for (double candidate_x : candidate_xs) {
+        double place_start = candidate_x;
+        double place_end   = candidate_x + task.totalWidth;
+        double cy = 0.0;
+
+        for (const auto& seg : skyline) {
+            if (seg.x2 <= place_start || seg.x1 >= place_end) continue;
+            if (seg.height > cy) cy = seg.height;
+        }
+
+        double check_start_x = candidate_x - 5.0;
+        double check_end_x   = candidate_x + task.totalWidth + 5.0;
+        for (const auto& seg : skyline) {
+            if (seg.x2 <= check_start_x || seg.x1 >= check_end_x) continue;
+            if (seg.height > cy) cy = seg.height;
+        }
+
+        if (cy + task.maxHeight > MAX_HEIGHT) continue;
+        if (cy < min_possible_y) min_possible_y = cy;
+    }
+
+    // ── 第二遍扫描：评价候选位置，优先填平同一水平线 ──
+    double best_level_score = 1e9;
+
     for (double candidate_x : candidate_xs) {
         double place_start = candidate_x;
         double place_end   = candidate_x + task.totalWidth;
@@ -76,7 +102,7 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         // 抬升后重新检查越顶
         if (candidate_y + task.maxHeight > MAX_HEIGHT) continue;
 
-        // 悬空稳态判定（放宽至30mm以提高托盘填充率）
+        // 悬空稳态判定（20mm 限制）
         double support_length = 0.0;
         for (const auto& seg : skyline) {
             if (std::abs(seg.height - candidate_y) < 0.01) {
@@ -87,21 +113,31 @@ bool PalletSpace::TryInsert(GrabTask& task) {
                 }
             }
         }
-        if (task.totalWidth - support_length > 30.0) continue;
+        if (task.totalWidth - support_length > 20.0) continue;
 
-        // B2: 三级评价：Y 最小 → 支撑率最大 → X 最小
+        // 水平约束评分：在最低水平面上的候选者获得强偏好，实现"先平铺后堆垛"
+        double level_score = (std::abs(candidate_y - min_possible_y) < 0.01)
+            ? -1000.0          // 同水平面 → 强烈优先
+            : candidate_y;      // 高于水平面 → 按 Y 比较
+
+        // 四级评价：同水平面优先 → Y 最小 → 支撑率最大 → X 最小
         bool better = false;
-        if (candidate_y < best_y - 0.01) {
+        if (level_score < best_level_score - 0.01) {
             better = true;
-        } else if (std::abs(candidate_y - best_y) < 0.01) {
-            double sr = support_length / task.totalWidth;
-            if (sr > best_support + 0.01) {
+        } else if (std::abs(level_score - best_level_score) < 0.01) {
+            if (candidate_y < best_y - 0.01) {
                 better = true;
-            } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
-                better = true;
+            } else if (std::abs(candidate_y - best_y) < 0.01) {
+                double sr = support_length / task.totalWidth;
+                if (sr > best_support + 0.01) {
+                    better = true;
+                } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
+                    better = true;
+                }
             }
         }
         if (better) {
+            best_level_score = level_score;
             best_y = candidate_y;
             best_x = candidate_x;
             best_support = support_length / task.totalWidth;
