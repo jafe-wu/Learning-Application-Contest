@@ -7,11 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ---- EasyX paths (auto-detect from VSINSTALLDIR env, or override manually) ----
 if(DEFINED ENV{VSINSTALLDIR})
     set(_VS_DIR "$ENV{VSINSTALLDIR}")
+elseif(EXISTS "E:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/VS")
+    set(_VS_DIR "E:/Program Files/Microsoft Visual Studio/2022/Community")
 elseif(EXISTS "D:/Visual Studio/VC/Auxiliary/VS")
     # Custom install path (common for this project)
     set(_VS_DIR "D:/Visual Studio")
 else()
-    # Default VS Community path — adjust if yours differs
+    # Default VS Community path
     set(_VS_DIR "C:/Program Files/Microsoft Visual Studio/2022/Community")
 endif()
 set(EASYX_INCLUDE "${_VS_DIR}/VC/Auxiliary/VS/include")
