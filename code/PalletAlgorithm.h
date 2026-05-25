@@ -19,7 +19,14 @@ private:
     // 最小烟型宽度 — 宽度小于此值的"死区"无法容纳任何新物件（默认 77.3，可动态设置）
     static double DEAD_ZONE_WIDTH;
 
+    // 列累计高度表：每 COL_WIDTH mm 一列，记录该位置累计堆叠的总高度
+    // 用于在候选评价中惩罚已经堆得很高的列，迫使算法向低列扩散
+    static constexpr int    COL_COUNT = 44;        // 440 mm / 10 mm
+    static constexpr double COL_WIDTH = 10.0;
+    std::vector<double> columnHeights;
+
     void UpdateSkyline(const GrabTask& task);
+    void UpdateColumnHeights(const GrabTask& task);
     // 抹平狭窄凹陷：把窄于 DEAD_ZONE_WIDTH 的下凹段拉到左右邻居的较高者
     void FlattenDeadZones();
 

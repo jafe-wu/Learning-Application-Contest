@@ -5,9 +5,10 @@
 
 double PalletSpace::DEAD_ZONE_WIDTH = 77.3;
 
-PalletSpace::PalletSpace() {
+PalletSpace::PalletSpace()
+    : columnHeights(COL_COUNT, 0.0) {
     // 初始化地面，高度 0，预留容量避免扩容开销
-    skyline.reserve(32); 
+    skyline.reserve(32);
     skyline.push_back({0.0, MAX_WIDTH, 0.0});
 }
 
@@ -131,6 +132,20 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         if (right_adj > 0.01)
             uniformity_penalty = std::max(uniformity_penalty, std::abs(new_seg_height - right_adj));
 
+        // 列均匀性：放置位置覆盖的列的累计堆叠高度，惩罚往已堆高处继续堆
+        double total_col_h = 0.0;
+        int col_count = 0;
+        for (int ci = 0; ci < (int)columnHeights.size(); ++ci) {
+            double col_start = ci * COL_WIDTH;
+            double col_end   = (ci + 1) * COL_WIDTH;
+            if (col_start < place_end && col_end > place_start) {
+                total_col_h += columnHeights[ci];
+                col_count++;
+            }
+        }
+        double avg_col_h = (col_count > 0) ? total_col_h / col_count : 0.0;
+        uniformity_penalty += avg_col_h * 0.3;
+
         // 水平约束评分：在最低水平面上的候选者获得强偏好，实现"先平铺后堆垛"
         double level_score = (std::abs(candidate_y - min_possible_y) < 0.01)
             ? -1000.0          // 同水平面 → 强烈优先
@@ -207,7 +222,7 @@ void PalletSpace::UpdateSkyline(const GrabTask& task) {
             }
         }
     }
-    
+
     if (!new_added) {
         new_skyline.push_back({start_x, end_x, new_height});
     }
@@ -215,12 +230,26 @@ void PalletSpace::UpdateSkyline(const GrabTask& task) {
     // 清空原数组，执行等高线段合并
     skyline.clear();
     for (const auto& seg : new_skyline) {
-        if (!skyline.empty() && 
-            std::abs(skyline.back().height - seg.height) < 0.01 && 
+        if (!skyline.empty() &&
+            std::abs(skyline.back().height - seg.height) < 0.01 &&
             std::abs(skyline.back().x2 - seg.x1) < 0.01) {
             skyline.back().x2 = seg.x2;
         } else {
             skyline.push_back(seg);
+        }
+    }
+
+    UpdateColumnHeights(task);
+}
+
+void PalletSpace::UpdateColumnHeights(const GrabTask& task) {
+    double start_x = task.x;
+    double end_x   = task.x + task.totalWidth;
+    for (int ci = 0; ci < (int)columnHeights.size(); ++ci) {
+        double col_start = ci * COL_WIDTH;
+        double col_end   = (ci + 1) * COL_WIDTH;
+        if (col_start < end_x && col_end > start_x) {
+            columnHeights[ci] += task.maxHeight;
         }
     }
 }
