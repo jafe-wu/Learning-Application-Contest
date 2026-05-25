@@ -59,10 +59,11 @@ int main() {
                   << "  利用率=" << p.utilizationPct << "%\n";
     }
 
-    // ── 4. 导出码垛数据 CSV ─────────────────────────────
+    // ── 4. 导出码垛数据 CSV（UTF-8 BOM） ─────────────────
     {
-        std::ofstream csv("pallet_result.csv");
-        csv << "码垛号,码垛机械手抓取顺序号,订单顺序号,来料顺序号,卷烟名称,抓取数量\n";
+        std::ofstream csv("pallet_result.csv", std::ios::binary);
+        csv.write("\xEF\xBB\xBF", 3);  // UTF-8 BOM，Excel 可正确识别
+        csv << u8"码垛号,码垛机械手抓取顺序号,订单顺序号,来料顺序号,卷烟名称,抓取数量\n";
         for (const auto& p : controller.GetPallets()) {
             int orderId = 0;
             try { orderId = std::stoi(p.orderId.substr(6)); } catch (...) {}

@@ -35,6 +35,10 @@ if(MSVC)
     target_include_directories(main PRIVATE "${EASYX_INCLUDE}")
     target_link_directories(main PRIVATE "${EASYX_LIB_DIR}")
     target_link_libraries(main PRIVATE user32 gdi32 shell32 EasyXw)
+    # 静态链接 MSVC 运行时，生成独立 exe 无需 VC++ Redistributable
+    set_target_properties(main PROPERTIES
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
 else()
     message(FATAL_ERROR
         "This project requires MSVC + EasyX. "
