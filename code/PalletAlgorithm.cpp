@@ -50,31 +50,10 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         }
     }
 
-    // ── 第一遍扫描：计算当前最低可用水平面 ──
-    double min_possible_y = 1e9;
-    for (double candidate_x : candidate_xs) {
-        double place_start = candidate_x;
-        double place_end   = candidate_x + task.totalWidth;
-        double cy = 0.0;
-
-        for (const auto& seg : skyline) {
-            if (seg.x2 <= place_start || seg.x1 >= place_end) continue;
-            if (seg.height > cy) cy = seg.height;
-        }
-
-        double check_start_x = candidate_x - 5.0;
-        double check_end_x   = candidate_x + task.totalWidth + 5.0;
-        for (const auto& seg : skyline) {
-            if (seg.x2 <= check_start_x || seg.x1 >= check_end_x) continue;
-            if (seg.height > cy) cy = seg.height;
-        }
-
-        if (cy + task.maxHeight > MAX_HEIGHT) continue;
-        if (cy < min_possible_y) min_possible_y = cy;
-    }
-
-    // ── 第二遍扫描：评价候选位置，优先填平同一水平线 ──
-    double best_level_score = 1e9;
+    // ── 计算当前天际线的最低高度（基准层高），用于层偏差惩罚 ──
+    double min_skyline_h = skyline[0].height;
+    for (const auto& seg : skyline)
+        if (seg.height < min_skyline_h) min_skyline_h = seg.height;
 
     for (double candidate_x : candidate_xs) {
         double place_start = candidate_x;
@@ -104,20 +83,34 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         // 抬升后重新检查越顶
         if (candidate_y + task.maxHeight > MAX_HEIGHT) continue;
 
-        // 悬空稳态判定（20mm 限制）
+        // 悬空稳态判定（20mm 限制）：基于真实货物而非天际线，避免死区抹平产生虚假支撑
         double support_length = 0.0;
-        for (const auto& seg : skyline) {
-            if (std::abs(seg.height - candidate_y) < 0.01) {
-                double overlap_start = std::max(place_start, seg.x1);
-                double overlap_end   = std::min(place_end,   seg.x2);
+        double supported_left_edge = place_end;
+        double supported_right_edge = place_start;
+
+        if (candidate_y < 0.01) {
+            // 放置在地面上，全宽支撑
+            support_length = task.totalWidth;
+            supported_left_edge = place_start;
+            supported_right_edge = place_end;
+        } else {
+            for (const auto& item : placedItems) {
+                if (item.x + item.width <= place_start || item.x >= place_end) continue;
+                if (std::abs(item.y + item.height - candidate_y) > 0.01) continue;
+                double overlap_start = std::max(place_start, item.x);
+                double overlap_end   = std::min(place_end, item.x + item.width);
                 if (overlap_start < overlap_end) {
                     support_length += (overlap_end - overlap_start);
+                    if (overlap_start < supported_left_edge)  supported_left_edge  = overlap_start;
+                    if (overlap_end   > supported_right_edge) supported_right_edge = overlap_end;
                 }
             }
         }
-        if (task.totalWidth - support_length > 20.0) continue;
+        double left_unsupported  = supported_left_edge  - place_start;
+        double right_unsupported = place_end - supported_right_edge;
+        if (left_unsupported > 20.0 || right_unsupported > 20.0) continue;
 
-        // 垛型均匀性评价：新段与相邻段的高度差，差值越小垛型越均匀
+        // ── 综合评价 ──
         double new_seg_height = candidate_y + task.maxHeight;
         double left_adj = 0.0, right_adj = 0.0;
         for (const auto& seg : skyline) {
@@ -126,13 +119,23 @@ bool PalletSpace::TryInsert(GrabTask& task) {
             if (seg.x1 >= place_end - 0.1 && seg.x1 < place_end + 5.1)
                 right_adj = seg.height;
         }
-        double uniformity_penalty = 0.0;
-        if (left_adj > 0.01)
-            uniformity_penalty = std::max(uniformity_penalty, std::abs(new_seg_height - left_adj));
-        if (right_adj > 0.01)
-            uniformity_penalty = std::max(uniformity_penalty, std::abs(new_seg_height - right_adj));
+        double total_penalty = 0.0;
 
-        // 列均匀性：放置位置覆盖的列的累计堆叠高度，惩罚往已堆高处继续堆
+        // 1) 邻段高度差惩罚：仅在邻段高于候选底面时扣分
+        //    邻段高于底面 = 并排放置（同一水平面不同高度），需要惩罚
+        //    邻段等于底面 = 垂直堆垛（同一水平面同高度），高度差正常不扣分
+        if (left_adj > 0.01 && left_adj > candidate_y + 0.01)
+            total_penalty += std::abs(new_seg_height - left_adj);
+        if (right_adj > 0.01 && right_adj > candidate_y + 0.01)
+            total_penalty += std::abs(new_seg_height - right_adj);
+
+        // 2) 层偏差惩罚：离开最低天际线越远扣分越重
+        //    确保"先填平再堆垛"，但在该层会产生严重不平时允许适当偏离
+        double layer_dev = candidate_y - min_skyline_h;
+        if (layer_dev > 20.0)
+            total_penalty += (layer_dev - 20.0) * 3.0;
+
+        // 3) 列均匀性：覆盖列的累计堆叠高度，惩罚往已堆高处继续堆
         double total_col_h = 0.0;
         int col_count = 0;
         for (int ci = 0; ci < (int)columnHeights.size(); ++ci) {
@@ -144,36 +147,26 @@ bool PalletSpace::TryInsert(GrabTask& task) {
             }
         }
         double avg_col_h = (col_count > 0) ? total_col_h / col_count : 0.0;
-        uniformity_penalty += avg_col_h * 0.3;
+        total_penalty += avg_col_h * 0.5;
 
-        // 水平约束评分：在最低水平面上的候选者获得强偏好，实现"先平铺后堆垛"
-        double level_score = (std::abs(candidate_y - min_possible_y) < 0.01)
-            ? -1000.0          // 同水平面 → 强烈优先
-            : candidate_y;      // 高于水平面 → 按 Y 比较
-
-        // 五级评价：同水平面优先 → 垛型均匀性 → Y 最小 → 支撑率最大 → X 最小
+        // 三级评价：综合评分（越低越好）→ Y 最小 → 支撑率最大 → X 最小
         bool better = false;
-        if (level_score < best_level_score - 0.01) {
+        if (total_penalty < best_uniformity - 0.01) {
             better = true;
-        } else if (std::abs(level_score - best_level_score) < 0.01) {
-            if (uniformity_penalty < best_uniformity - 0.01) {
+        } else if (std::abs(total_penalty - best_uniformity) < 0.01) {
+            if (candidate_y < best_y - 0.01) {
                 better = true;
-            } else if (std::abs(uniformity_penalty - best_uniformity) < 0.01) {
-                if (candidate_y < best_y - 0.01) {
+            } else if (std::abs(candidate_y - best_y) < 0.01) {
+                double sr = support_length / task.totalWidth;
+                if (sr > best_support + 0.01) {
                     better = true;
-                } else if (std::abs(candidate_y - best_y) < 0.01) {
-                    double sr = support_length / task.totalWidth;
-                    if (sr > best_support + 0.01) {
-                        better = true;
-                    } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
-                        better = true;
-                    }
+                } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
+                    better = true;
                 }
             }
         }
         if (better) {
-            best_level_score = level_score;
-            best_uniformity = uniformity_penalty;
+            best_uniformity = total_penalty;
             best_y = candidate_y;
             best_x = candidate_x;
             best_support = support_length / task.totalWidth;
@@ -240,6 +233,7 @@ void PalletSpace::UpdateSkyline(const GrabTask& task) {
     }
 
     UpdateColumnHeights(task);
+    placedItems.push_back({task.x, task.y, task.totalWidth, task.maxHeight});
 }
 
 void PalletSpace::UpdateColumnHeights(const GrabTask& task) {

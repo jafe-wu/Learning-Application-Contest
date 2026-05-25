@@ -11,6 +11,11 @@ struct LineSegment {
     double height;
 };
 
+// 已放置货物的包围盒，用于悬空判定
+struct PlacedItem {
+    double x, y, width, height;
+};
+
 class PalletSpace {
 private:
     // 性能优化：将 std::list 替换为 std::vector 以提升 CPU 缓存命中率
@@ -24,6 +29,9 @@ private:
     static constexpr int    COL_COUNT = 44;        // 440 mm / 10 mm
     static constexpr double COL_WIDTH = 10.0;
     std::vector<double> columnHeights;
+
+    // 已放置货物列表，用于真实支撑判定（不被死区抹平污染）
+    std::vector<PlacedItem> placedItems;
 
     void UpdateSkyline(const GrabTask& task);
     void UpdateColumnHeights(const GrabTask& task);
