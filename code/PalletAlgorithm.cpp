@@ -20,6 +20,7 @@ bool PalletSpace::TryInsert(GrabTask& task) {
     double best_x = -1.0;
     double best_y = 1e9;
     double best_support = -1.0;
+    double best_uniformity = 1e9;
 
     std::vector<double> candidate_xs;
     candidate_xs.reserve(skyline.size() * 3 + 1);
@@ -115,29 +116,49 @@ bool PalletSpace::TryInsert(GrabTask& task) {
         }
         if (task.totalWidth - support_length > 20.0) continue;
 
+        // 垛型均匀性评价：新段与相邻段的高度差，差值越小垛型越均匀
+        double new_seg_height = candidate_y + task.maxHeight;
+        double left_adj = 0.0, right_adj = 0.0;
+        for (const auto& seg : skyline) {
+            if (seg.x2 > place_start - 5.1 && seg.x2 <= place_start + 0.1)
+                left_adj = seg.height;
+            if (seg.x1 >= place_end - 0.1 && seg.x1 < place_end + 5.1)
+                right_adj = seg.height;
+        }
+        double uniformity_penalty = 0.0;
+        if (left_adj > 0.01)
+            uniformity_penalty = std::max(uniformity_penalty, std::abs(new_seg_height - left_adj));
+        if (right_adj > 0.01)
+            uniformity_penalty = std::max(uniformity_penalty, std::abs(new_seg_height - right_adj));
+
         // 水平约束评分：在最低水平面上的候选者获得强偏好，实现"先平铺后堆垛"
         double level_score = (std::abs(candidate_y - min_possible_y) < 0.01)
             ? -1000.0          // 同水平面 → 强烈优先
             : candidate_y;      // 高于水平面 → 按 Y 比较
 
-        // 四级评价：同水平面优先 → Y 最小 → 支撑率最大 → X 最小
+        // 五级评价：同水平面优先 → 垛型均匀性 → Y 最小 → 支撑率最大 → X 最小
         bool better = false;
         if (level_score < best_level_score - 0.01) {
             better = true;
         } else if (std::abs(level_score - best_level_score) < 0.01) {
-            if (candidate_y < best_y - 0.01) {
+            if (uniformity_penalty < best_uniformity - 0.01) {
                 better = true;
-            } else if (std::abs(candidate_y - best_y) < 0.01) {
-                double sr = support_length / task.totalWidth;
-                if (sr > best_support + 0.01) {
+            } else if (std::abs(uniformity_penalty - best_uniformity) < 0.01) {
+                if (candidate_y < best_y - 0.01) {
                     better = true;
-                } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
-                    better = true;
+                } else if (std::abs(candidate_y - best_y) < 0.01) {
+                    double sr = support_length / task.totalWidth;
+                    if (sr > best_support + 0.01) {
+                        better = true;
+                    } else if (std::abs(sr - best_support) < 0.01 && candidate_x < best_x) {
+                        better = true;
+                    }
                 }
             }
         }
         if (better) {
             best_level_score = level_score;
+            best_uniformity = uniformity_penalty;
             best_y = candidate_y;
             best_x = candidate_x;
             best_support = support_length / task.totalWidth;

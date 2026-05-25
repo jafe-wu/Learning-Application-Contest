@@ -18,6 +18,7 @@ int main() {
     if (!dims.LoadFromCSV("dims.csv")) {
         std::cerr << "[错误] 无法加载 dims.csv，请确认文件存在于程序同目录\n";
         system("pause");
+
         return 1;
     }
     std::cout << "尺寸库加载完成，共 " << dims.Size() << " 条记录\n";
